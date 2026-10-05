@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      viewport-fit=cover is what makes the `env(safe-area-inset-*)` values
+      readable at all (LCE-358). Combined with the black-translucent status bar
+      style below, the installed PWA draws under the notch/Dynamic Island and the
+      home indicator; without `cover` iOS reports every inset as 0, so the
+      safe-area padding in AppShell/Deck/Dashboard silently does nothing and the
+      header collides with the system clock. In a normal browser tab the insets
+      are 0 (or the real unsafe area in landscape), so the same padding is a
+      no-op there — never double-padded.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" href="/favicon.ico?v=vsk2" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=vaneskald" />
+    <!-- Must be a PNG: iOS ignores SVG apple-touch-icons and falls back to a
+         page screenshot, which is what home-screen installs were getting. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=vaneskald" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="canonical" href="https://vaneskald.com/" />
+    <!-- Vaneskald night-sky navy (the mark's ground) — was the old brand purple. -->
+    <meta name="theme-color" content="#0b1026" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Vaneskald" />
+    <meta name="application-name" content="Vaneskald" />
+    <meta name="author" content="Vaneskald" />
+
+    <title>The Vaneskald Engine — Autonomous AI Short-Form Video</title>
+    <meta
+      name="description"
+      content="The Vaneskald Engine autonomously generates and posts short-form video — AI script, voiceover, video render, and auto-post. Set your niche and tone; it runs itself."
+    />
+    <meta
+      name="keywords"
+      content="AI video generator, short-form video, faceless content, TikTok automation, AI voiceover, content automation"
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="The Vaneskald Engine" />
+    <meta property="og:title" content="The Vaneskald Engine — Autonomous AI Short-Form Video" />
+    <meta
+      property="og:description"
+      content="AI script → voiceover → video → auto-post. Short-form content that runs itself."
+    />
+    <meta property="og:url" content="https://vaneskald.com/" />
+    <meta property="og:image" content="https://vaneskald.com/og/waitlist.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Vaneskald Engine — autonomous AI short-form video" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="The Vaneskald Engine" />
+    <meta
+      name="twitter:description"
+      content="AI script → voiceover → video → auto-post. Short-form content that runs itself."
+    />
+    <meta name="twitter:image" content="https://vaneskald.com/og/waitlist.png" />
+
+    <!--
+      JSON-LD structured data (SoftwareApplication + Organization) for rich
+      results. Kept in a single @graph so the SoftwareApplication can reference
+      the Organization as its publisher by @id. The `offers` reflect only the
+      free entry tier (a stable freemium fact); paid tier prices are deliberately
+      NOT hard-coded here so this markup never goes stale when pricing changes.
+      Validate with Google's Rich Results Test after edits.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://vaneskald.com/#organization",
+            "name": "The Vaneskald Engine",
+            "url": "https://vaneskald.com/",
+            "logo": "https://vaneskald.com/logo.svg",
+            "description": "Autonomous AI short-form video: script, voiceover, render, and auto-post."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "The Vaneskald Engine",
+            "url": "https://vaneskald.com/",
+            "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Web",
+            "description": "The Vaneskald Engine autonomously generates and posts short-form video — AI script, voiceover, video render, and auto-post. Set your niche and tone; it runs itself.",
+            "publisher": { "@id": "https://vaneskald.com/#organization" },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "Free tier — AI script preview, no card required."
+            }
+          }
+        ]
+      }
+    </script>
+
+    <!--
+      Branded boot splash: inline HTML/CSS/SVG rendered as a sibling overlay of
+      #root to cover the blank-screen flash before the React bundle loads
+      (compounded by App Runner cold-start, LCE-82). It sits OUTSIDE #root so
+      React's createRoot(...).render() does not wipe it on mount — instead
+      main.tsx dismisses it via dismissBootSplash(), which enforces a minimum
+      on-screen duration (LCE-155) and fades it out. No external requests.
+      Per-device apple-touch-startup-image splash images are deliberately skipped
+      for maintainability — this inline splash provides equivalent UX coverage.
+    -->
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #0b1026; /* Vaneskald night-sky — must match manifest background_color */
+        color: #cbd6f5;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        text-align: center;
+        padding: 24px;
+        /* Fade-out on dismissal (LCE-155) — the duration is mirrored by
+           SPLASH_FADE_MS in src/bootSplash.ts. */
+        transition: opacity 220ms ease;
+      }
+      #boot-splash .boot-splash__logo {
+        width: 96px;
+        height: 96px;
+        animation: boot-splash-pulse 1.8s ease-in-out infinite;
+      }
+      #boot-splash .boot-splash__wordmark {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: #ffffff;
+      }
+      #boot-splash .boot-splash__tagline {
+        font-size: 13px;
+        font-weight: 500;
+        color: #8e97be;
+      }
+      @keyframes boot-splash-pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.72;
+          transform: scale(0.94);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash .boot-splash__logo {
+          animation: none;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-ZS0-quF2.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DpT_hulU.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- role="status" (not "img"): the splash carries real text (wordmark +
+         tagline) that assistive tech should announce as a polite live region;
+         role="img" would collapse it into one unnamed graphic. -->
+    <div id="boot-splash" role="status">
+      <svg
+        class="boot-splash__logo"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 100 100"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <!-- The Vaneskald mark (LCE-697): longship hull + sword + compass rose,
+             same paths as favicon.svg. Bare mark, no backing rect — the splash
+             ground is already the night-sky navy. -->
+        <path
+          d="M43.6 43.6 L50.0 3.0 L56.4 43.6 Z M56.4 43.6 L97.0 50.0 L56.4 56.4 Z M56.4 56.4 L50.0 97.0 L43.6 56.4 Z M43.6 56.4 L3.0 50.0 L43.6 43.6 Z"
+          fill="#2A6B4A"
+        />
+        <path d="M34 30 L94 30 A60 42 0 0 1 34 72 Z" fill="#E8B44A" />
+        <path d="M34 37 L84.5 37 A50 35 0 0 1 34 65.5 Z" fill="#0B1026" opacity=".78" />
+        <!-- Aurora bands inside the vane — the full-detail tier: the splash
+            renders the mark ~90px, well above the 48px simplification cutoff,
+            so it carries the bands like the sidebar and favicon-512 do. -->
+        <clipPath id="vane-inner">
+          <path d="M34 37 L84.5 37 A50 35 0 0 1 34 65.5 Z" />
+        </clipPath>
+        <g clip-path="url(#vane-inner)" fill="#4ADE80">
+          <rect x="34" y="39.4" width="51" height="2.3" />
+          <rect x="34" y="44.6" width="51" height="2.3" />
+          <rect x="34" y="49.8" width="51" height="2.3" />
+          <rect x="34" y="55" width="51" height="2.3" />
+          <rect x="34" y="60.2" width="51" height="2.3" />
+        </g>
+        <path d="M26.5 9 h12 v8.3 h-12 z" fill="#E8B44A" />
+        <path d="M29.7 17.3 h5.6 v12.7 h-5.6 z" fill="#E8B44A" />
+        <path d="M10 30 h26.6 v5.6 h-26.6 z" fill="#E8B44A" />
+        <path d="M28.4 35.6 h8.2 v46.4 l-4.1 12 l-4.1 -12 z" fill="#CBD6F5" />
+      </svg>
+      <div class="boot-splash__wordmark">The Vaneskald Engine</div>
+      <div class="boot-splash__tagline">Post every day. Film nothing.</div>
+    </div>
+  </body>
+</html>

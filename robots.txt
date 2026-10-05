@@ -1,0 +1,13 @@
+# robots.txt for https://vaneskald.com
+# Public marketing + auth pages are crawlable; the authed app shell is not
+# (client-rendered, per-user, nothing to index).
+
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /deck
+Disallow: /insights
+Disallow: /settings
+Disallow: /onboarding
+
+Sitemap: https://vaneskald.com/sitemap.xml
